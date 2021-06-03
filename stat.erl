@@ -1,4 +1,3 @@
-% TODO kurtosis https://de.wikipedia.org/wiki/W%C3%B6lbung_(Statistik)
 -module(stat).
 
 -include_lib("eunit/include/eunit.hrl").

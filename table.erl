@@ -1,22 +1,15 @@
 -module(table).
 
--export( [ 	new/0, get_col/2, get_col_if/3, print/1, append_row/2
+-export( [ 	get_col/2, get_col_if/3, print/1, append_row/2
 			%from_csv/1,	hd/1, select_row/2, select_col/2
 		 ]).
 
-%-record( etable, {	nrows = 0 :: non_neg_integer(),
-					%tbl = [] :: list( list() )
-				%}
-		%).
 
-%-opaque table() :: #etable{}.
+
 -opaque table() :: list( list( string() | number() ) ).
 
 -export_type( [table/0] ).
 
-
-new() ->
-	[].
 
 %
 % return column N as a list.
