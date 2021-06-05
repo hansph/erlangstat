@@ -36,3 +36,8 @@ exports type table().
 * get_col/2, get_col_if/3 - extract a column from a table
 * print/1
 * append_row/2 - appends a row
+* get_row/1 - return the nth row
+* subtable/2 - extract rows into a new table
+
+##exampl1.erl
+An example on how to use the library
