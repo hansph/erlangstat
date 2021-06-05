@@ -39,5 +39,5 @@ exports type table().
 * get_row/1 - return the nth row
 * subtable/2 - extract rows into a new table
 
-##exampl1.erl
+## exampl1.erl
 An example on how to use the library
