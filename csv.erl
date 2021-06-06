@@ -61,7 +61,7 @@ write_list( Fname, L, Options ) ->
 parse(Csv,Acc,Sep,0,undefined) ->
 	case file:read_line(Csv) of
 		{ok,Row} ->
-			Cols = cleanup(string:lexemes(Row,Sep),[]),
+			Cols = cleanup(string:split(Row,Sep,all),[]),
 			New_acc= [ Cols | Acc ],
 			parse(Csv,New_acc,Sep,0,undefined);
 		eof ->
@@ -73,7 +73,7 @@ parse(Csv,Acc,Sep,0,undefined) ->
 parse(Csv,Acc,Sep,0,true) ->
 	case file:read_line(Csv) of
 		{ok,Row} ->
-			Tokens = string:lexemes(Row,Sep),
+			Tokens = string:split(Row,Sep,all),
 			Cols = lists:foldl( fun(E,CAcc) -> [convert_str(E)|CAcc] end, [],Tokens),
 			New_acc= [ lists:reverse(Cols) | Acc ],
 			parse(Csv,New_acc,Sep,0,true);
