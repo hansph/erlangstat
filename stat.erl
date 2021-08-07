@@ -1,11 +1,12 @@
 -module(stat).
 
 -include_lib("eunit/include/eunit.hrl").
--define( assertApprox(Val1,Val2), ?assert(approx(Val1,Val2,1.0e-7)) ).
+-define( assertApprox(Val1,Val2), ?assert(approx(Val1,Val2,1.0e-5)) ).
 
 -export( [minmax/1, print/1, avg/1, variance/1, variance_welford/1,
 		median/1, median_s/1, stddev/1, stddev_sample/1, sample_error/1,
-		covar/2, covar_sample/2, correlation/2 ] ).
+		covar/2, covar_sample/2, correlation/2, kurtosis/1, kurtosis_sample/1,
+		skewness/1, skewness_sample/1 ] ).
 
 -record( stats, {	num = 0 ::non_neg_integer(),
 					min = 0 ::number(),
@@ -16,7 +17,8 @@
 				}
 		).
 
-% @doc return basic statistics: number of elements, min, max, avg, sum, stdev
+%
+% @doc return basic statistics: number of elements, min, max, avg, sum, variance
 %
 -spec minmax( list(number()) ) -> #stats{}.
 minmax( L ) ->
@@ -30,6 +32,9 @@ minmax( L ) ->
 	S#stats{ num=length(L), avg=S#stats.sum/length(L), var=variance_welford(L) }.
 	
 
+%
+% @doc print a stats record
+%
 print(S) ->
 	io:format("num= ~p, min= ~p, avg= ~p, max= ~p, sum= ~p, variance= ~g~n",[S#stats.num,S#stats.min,S#stats.avg,S#stats.max,S#stats.sum,S#stats.var]).
 
@@ -41,9 +46,10 @@ avg(L) ->
 	
 
 variance(L) ->
-	Len = length(L),
-	Avg = lists:sum(L)/Len,
-	lists:foldl( fun(E,Acc) -> (E-Avg)*(E-Avg) + Acc end, 0, L) / Len.
+	%Len = length(L),
+	%Avg = lists:sum(L)/Len,
+	%lists:foldl( fun(E,Acc) -> (E-Avg)*(E-Avg) + Acc end, 0, L) / Len.
+	central_moment(L,2)/length(L).
 
 
 variance_welford(L) ->
@@ -102,13 +108,44 @@ median_s(L) ->
 			(lists:nth( length(Ls) div 2, Ls) + lists:nth( length(Ls) div 2 + 1, L))*0.5
 	end.
 
+%
+% @doc pearsons biased kurtosis, subtract 3 to get fishers kurtosis value
+%
+kurtosis(L) ->
+	central_moment(L,4) / math:pow(central_moment(L,2),2) * length(L).
+
+
+skewness(L) ->
+	central_moment(L,3) / math:pow(stddev(L),3) / length(L).
+
+%
+% @doc unbiased skewness of a sampe
+%
+skewness_sample(L) ->
+	Len = length(L),
+	skewness(L) * math:sqrt(Len*(Len-1.0))/(Len-2.0).
+
+%
+% @doc biased pearsons kurtosis estimator for samples, subtract 3 to get fishers kurtosis value
+% 
+kurtosis_sample(L) ->
+	N = length(L),
+	central_moment(L,4) / math:pow(central_moment(L,2),2) * N.
+
+
+% TODO: sample kurtosis, sample skewness
+
+%
 % -------- private ------------
+%
+
+central_moment(L,N) ->
+	Avg = lists:sum(L)/length(L),
+	lists:foldl( fun(E,Acc) -> math:pow(E-Avg,N) + Acc end, 0, L).
+
 
 sample_var(L) when is_list(L) ->
-	Len = length(L),
-	Avg = lists:sum(L)/Len,
-	lists:foldl( fun(E,Acc) -> (E-Avg)*(E-Avg) + Acc end, 0, L) / (Len-1).
-
+	central_moment(L,2) / (length(L)-1).
 
 loop([],_,_,_,Sum) ->
 	Sum;
@@ -120,7 +157,6 @@ quickselect(L,_) when length(L) == 1 ->
 	hd(L);
 
 quickselect(L,K) ->
-	%Pivot = lists:nth(rand:uniform(length(L)),L),
 	Pivot = hd(L),
 	{Lows,Highs,Pivs} = psplit(L,Pivot),
 
@@ -141,8 +177,29 @@ psplit(L,Pivot) ->
 	{Low,P,High}.
 
 % --------- test ------------
+approx(0,B,Eps) ->
+	abs(B) < Eps;
+
+approx(A,0,Eps) ->
+	abs(A) < Eps;
+
 approx(A,B,Eps) ->
-	abs(A - B) < Eps.
+	abs( (A - B)/A ) < Eps.
+
+%
+% ----------- unit tests ------------
+%
+
+approx_test() ->
+	Eps = 0.001,
+	?assert( approx(3.14,3.13999,Eps)),
+	?assert( approx(3,3,Eps)),
+	?assert( approx(0,1.0e-6,Eps)),
+	?assert( approx(1.0e-6,0,Eps)),
+	?assert( approx(10000,9999,Eps)),
+
+	?assertNot( approx(3,4,Eps)).
+
 
 s_test() ->
 	L = [ 0,1,2,3,4,5 ],
@@ -166,4 +223,16 @@ median_test() ->
 	?assertEqual(57,median([60,53,168,59,52,55,57])),
 	?assertEqual(4,median([4, 1, 15, 2, 4, 5, 4])),
 	?assertEqual(30,median([11,23,30,47,56])),
+	?assertEqual(4,median([3,3,3,4,4,5,7,7,84])),
 	?assertEqual(38.5,median([11,23,30,47,52,56])).
+
+kurtosis_Skewness_test() ->
+	L = [26,12,16,56,112,24],
+	?assertApprox(3.05052136,kurtosis(L)),
+	?assertApprox(1.24294029381,skewness(L)),
+	
+	L2 = [88,95,92,97,96,97,94,86,91,95,97,88,85,76,68],
+	?assertApprox(4.177864521798208,kurtosis(L2)),
+	?assertApprox(-1.391777,skewness(L2)),
+	?assertApprox(4.1778645217,kurtosis_sample(L2)),
+	?assertApprox(-1.5514429859477756,skewness_sample(L2)).

@@ -68,7 +68,7 @@ print(T) ->
 	print_rows(-1,T).
 
 
-% print the first N columns of a table
+% print the first N rows of a table
 print(N,T) ->
 	print_rows(N,T).
 

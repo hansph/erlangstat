@@ -18,6 +18,8 @@ Basic statistics:
 * stddev/1 - standard deviation
 * stddev_sample/1 - standard deviation of a sample
 * sample_error/1 - standard error
+* kurtosis and kurtosis_sample (biased)
+* skewness and skewness_sample (unbiased)
 * covar/2 - covariance
 * covar_sample/2 - covariance of a sample
 * correlation/2
