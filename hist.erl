@@ -1,10 +1,17 @@
 -module(hist).
 
--export( [ create/2, create/4, print/1 ] ).
+-export( [ create/2, create/4, normalize/1, print/1 ] ).
 
 -include_lib("eunit/include/eunit.hrl").
 
--record( histogram, { min, max, nbins, binsize, frequency } ).
+-record( histogram, { min		:: number(),
+					  max		:: number(),
+					  nbins		:: pos_integer(),
+					  binsize	:: number(),
+					  nvalues	:: non_neg_integer(),
+					  frequency	:: list(number())
+					 }
+		).
 
 -type histogram() :: #histogram{}.
 
@@ -20,6 +27,17 @@ create( Numbers, Bins ) ->
 	create(Numbers,Bins,lists:min(Numbers),lists:max(Numbers)).
 
 %
+% @returns a density histogram where all frequencies are normalized
+%
+-spec normalize( histogram() ) -> histogram().
+normalize( H ) ->
+	H#histogram{frequency =
+		lists:reverse(
+			lists:foldl( fun(X,A) -> [ X/H#histogram.nvalues | A] end, [], H#histogram.frequency)
+		)
+	}.
+
+%
 % @param Numbers : a list containing the data
 % @param Bins : number of bins
 % @param Min : minimum, "left" side of the histogram, everything small than Min is counted in the first bin
@@ -30,6 +48,7 @@ create( Numbers, Bins, Min, Max ) ->
 	H = #histogram{
 		min = Min,
 		nbins = Bins,
+		nvalues = length(Numbers),
 		binsize = abs((Max-Min)/Bins),
 		max = Max - abs((Max-Min)/Bins),
 		frequency = []
@@ -39,8 +58,9 @@ create( Numbers, Bins, Min, Max ) ->
 
 -spec print( histogram() ) -> ok.
 print( H ) ->
-	io:format("Histarray Bins=~p, Min=~p, Max=~p, Binsize=~p~n",[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize]),
-	?debugFmt("Histarray Bins=~p, Min=~p, Max=~p, Binsize=~p",[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize]),
+	Msg = "Histarray Bins=~p, Min=~p, Max=~p, Binsize=~p, N=~p~n",
+	io:format(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
+	?debugFmt(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
 	print(H#histogram.nbins, H).
 
 print(0,_) -> ok;
