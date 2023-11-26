@@ -1,17 +1,10 @@
 -module(hist).
 
-<<<<<<< HEAD
 -export( [ create/2, create/4, normalize/1, cumhist/1, cumhist/2, print/1, values/1 ] ).
 
 -include_lib("eunit/include/eunit.hrl").
 
 % TODO move to an include file
-=======
--export( [ create/2, create/4, normalize/1, print/1 ] ).
-
--include_lib("eunit/include/eunit.hrl").
-
->>>>>>> refs/remotes/origin/main
 -record( histogram, { min		:: number(),
 					  max		:: number(),
 					  nbins		:: pos_integer(),
@@ -28,25 +21,20 @@
 
 %
 % @param Numbers : a list containing the data
-<<<<<<< HEAD
 % @param Bins : number of bins, starting from min(Numbers) to max(Numbers),
 %				width of a bin is abs((Max-Min)/Bins)
-=======
 % @param Bins : number of bins, starting from min(Numbers) to max(Numbers)
->>>>>>> refs/remotes/origin/main
 %
 -spec create( list(number()), non_neg_integer() ) -> histogram().
 create( Numbers, Bins ) ->
 	create(Numbers,Bins,lists:min(Numbers),lists:max(Numbers)).
 
 %
-<<<<<<< HEAD
 % @param Numbers : a list containing the data
 % @param Bins : number of bins
 % @param Min : minimum, "left" side of the histogram, everything small than Min is counted in the first bin
 % @param Max : maximum, "right" side, everything larger is counted in the last bin
 %
-=======
 % @returns a density histogram where all frequencies are normalized
 %
 -spec normalize( histogram() ) -> histogram().
@@ -63,7 +51,6 @@ normalize( H ) ->
 % @param Min : minimum, "left" side of the histogram, everything small than Min is counted in the first bin
 % @param Max : maximum, "right" side, everything larger is counted in the last bin
 %
->>>>>>> refs/remotes/origin/main
 -spec create( list(number()), non_neg_integer(), number(), number() ) -> histogram().
 create( Numbers, Bins, Min, Max ) ->
 	H = #histogram{
@@ -76,18 +63,6 @@ create( Numbers, Bins, Min, Max ) ->
 	},
 	Hc = counters:new(Bins,[atomics]),
 	hist(Numbers,H,Hc).
-<<<<<<< HEAD
-
-%
-% @returns a density histogram where all frequencies are normalized
-%
--spec normalize( histogram() ) -> histogram().
-normalize( H ) ->
-	H#histogram{frequency =
-		lists:reverse(
-			lists:foldl( fun(X,A) -> [ X/H#histogram.nvalues | A] end, [], H#histogram.frequency)
-		)
-	}.
 
 
 -spec print( histogram() ) -> ok.
@@ -148,24 +123,6 @@ cumhist(Data) ->
 -spec values( histogram() ) -> list( non_neg_integer() ).
 values( Hist ) ->
 	Hist#histogram.frequency.
-=======
->>>>>>> refs/remotes/origin/main
-
--spec print( histogram() ) -> ok.
-print( H ) ->
-	Msg = "Histarray Bins=~p, Min=~p, Max=~p, Binsize=~p, N=~p~n",
-	io:format(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
-	?debugFmt(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
-	print(H#histogram.nbins, H).
-
-print(0,_) -> ok;
-
-print( I, H ) ->
-	Lower = H#histogram.min + (I-1.0)*H#histogram.binsize,
-	Upper = Lower + H#histogram.binsize,
-	io:format("~p: Val ~f < ~f : ~p~n",[I,Lower, Upper, lists:nth(I,H#histogram.frequency)]),
-	?debugFmt("~p: Val ~f < ~f : ~p",[I,Lower, Upper, lists:nth(I,H#histogram.frequency)]),
-	print(I-1,H).
 
 %
 % ------- private -------
@@ -211,7 +168,6 @@ index(Val,H) ->
 
 %
 % ----------- unit test -----------
-<<<<<<< HEAD
 %
 
 % helper to compare floats
@@ -229,8 +185,6 @@ assertApprox([H1|T1],[H2|T2],Eps) ->
 	end,	
 	assertApprox(T1,T2,Eps).
 
-=======
->>>>>>> refs/remotes/origin/main
 
 assertHist( Expected, Hist ) ->
 	?debugFmt("--- Input: ~p",[Expected]),
