@@ -24,6 +24,9 @@ Basic statistics:
 * covar_sample/2 - covariance of a sample
 * correlation/2
 
+## hist.erl
+create a histogram
+
 ## csv.erl
 Read/write a csv file into a list of lists (a "table")
 
