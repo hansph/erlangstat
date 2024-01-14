@@ -1,9 +1,10 @@
 -module(hist).
 
--export( [ create/2, create/4, normalize/1, print/1 ] ).
+-export( [ create/2, create/4, normalize/1, cumhist/1, cumhist/2, print/1, values/1 ] ).
 
 -include_lib("eunit/include/eunit.hrl").
 
+% TODO move to an include file
 -record( histogram, { min		:: number(),
 					  max		:: number(),
 					  nbins		:: pos_integer(),
@@ -20,12 +21,19 @@
 
 %
 % @param Numbers : a list containing the data
+% @param Bins : number of bins, starting from min(Numbers) to max(Numbers),
+%				width of a bin is abs((Max-Min)/Bins)
 % @param Bins : number of bins, starting from min(Numbers) to max(Numbers)
 %
 -spec create( list(number()), non_neg_integer() ) -> histogram().
 create( Numbers, Bins ) ->
 	create(Numbers,Bins,lists:min(Numbers),lists:max(Numbers)).
 
+%
+% @param Numbers : a list containing the data
+% @param Bins : number of bins
+% @param Min : minimum, "left" side of the histogram, everything small than Min is counted in the first bin
+% @param Max : maximum, "right" side, everything larger is counted in the last bin
 %
 % @returns a density histogram where all frequencies are normalized
 %
@@ -56,11 +64,11 @@ create( Numbers, Bins, Min, Max ) ->
 	Hc = counters:new(Bins,[atomics]),
 	hist(Numbers,H,Hc).
 
+
 -spec print( histogram() ) -> ok.
 print( H ) ->
 	Msg = "Histarray Bins=~p, Min=~p, Max=~p, Binsize=~p, N=~p~n",
 	io:format(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
-	?debugFmt(Msg,[H#histogram.nbins,H#histogram.min,H#histogram.max,H#histogram.binsize,H#histogram.nvalues]),
 	print(H#histogram.nbins, H).
 
 print(0,_) -> ok;
@@ -69,8 +77,52 @@ print( I, H ) ->
 	Lower = H#histogram.min + (I-1.0)*H#histogram.binsize,
 	Upper = Lower + H#histogram.binsize,
 	io:format("~p: Val ~f < ~f : ~p~n",[I,Lower, Upper, lists:nth(I,H#histogram.frequency)]),
-	?debugFmt("~p: Val ~f < ~f : ~p",[I,Lower, Upper, lists:nth(I,H#histogram.frequency)]),
+	%?debugFmt("~p: Val ~f < ~f : ~p",[I,Lower, Upper, lists:nth(I,H#histogram.frequency)]),
 	print(I-1,H).
+
+
+%
+% Cumulative histogram
+%
+% directly calculate the cum. histogram from the data values without
+% intermediate histogram.
+%
+% @param Data is a list of numbers()
+% @param N is the number of sampling points to be calculated (bins in the histogram)
+% @return list of N percentiles
+%
+-spec cumhist( list(number()),non_neg_integer() ) -> list(number()).
+cumhist(Data,N) ->
+	H = create(Data,N),
+	cumhist( H#histogram.frequency ).
+
+%
+% Cumulative histogram
+%
+% 
+% Creates an cumulative histogram from a histogram
+%
+% @param Data is a list of the frequency of occurence (absolute)
+% @return list of percentiles
+%
+-spec cumhist( list( non_neg_integer() ) ) -> list(number()).
+cumhist(Data) ->
+	N = lists:sum(Data),
+	R = lists:reverse(
+			lists:foldl( fun(X,Acc) -> [ X/N | Acc ] end,[],Data)
+		),
+	[ _ | Distrib ] = lists:reverse(
+			lists:foldl( fun(X,Acc) -> [ X + hd(Acc) | Acc ] end,[0],R)
+		),
+	Distrib.
+
+
+%
+% return the histogram values as a list, starting with the 'left most' value
+%
+-spec values( histogram() ) -> list( non_neg_integer() ).
+values( Hist ) ->
+	Hist#histogram.frequency.
 
 %
 % ------- private -------
@@ -114,7 +166,25 @@ hist([Head|Tail],H,C) ->
 index(Val,H) ->
 	trunc(abs((Val - H#histogram.min)/H#histogram.binsize)) +1.
 
+%
 % ----------- unit test -----------
+%
+
+% helper to compare floats
+assertApprox([],[],_) ->
+	ok;
+
+assertApprox([],_,_) ->
+	?assert(false);
+
+assertApprox([H1|T1],[H2|T2],Eps) ->
+	case abs(H1 - H2) < Eps of
+		true -> ok;
+		_ ->
+			?assertEqual(H1,H2)
+	end,	
+	assertApprox(T1,T2,Eps).
+
 
 assertHist( Expected, Hist ) ->
 	?debugFmt("--- Input: ~p",[Expected]),
@@ -150,3 +220,10 @@ hist_test() ->
 	assertHist([3,1,2,3,4],Whist),
 
 	ok.
+
+
+cumhist_test() ->
+	% https://www.quora.com/What-is-an-empirical-distribution-function
+	assertApprox( cumhist([1,2,3,4,5,6],6), [1/6,2/6,3/6,4/6,5/6,1.0], 1.0e-5 ),
+	assertApprox( cumhist([0.025,0.0125,0.0625,0.1,0.1625,0.1875,0.125,0.125,0.075,0.1,0.025]),
+					[0.025,0.0375,0.1,0.2,0.3625,0.55,0.675,0.8,0.875,0.975,1.0], 1.0e-5 ).
