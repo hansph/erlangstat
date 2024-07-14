@@ -7,7 +7,7 @@
 -export( [minmax/1, print/1, avg/1, variance/1, variance_welford/1,
 			median/1, stddev/1, stddev_sample/1, sample_error/1,
 			covar/2, covar_sample/2, correlation/2,
-			entropy/1
+			entropy/1, mode/1, multimode/1
 		 ] ).
 
 -record( stats, {	num = 0 ::non_neg_integer(),
@@ -99,12 +99,51 @@ median(L) ->
 			(quickselect(L,Len div 2) + quickselect(L,Len div 2 - 1))*0.5
 	end.
 
+% count the occurence of values
+%
+% return a tuple {number of occurances,number}, the first found
+%
+-spec mode(list(number())) -> {number(),list(number())}.
+mode(L) ->
+	{Count,Values} = multimode(L),
+	case Count of
+		0 -> {0,0};
+		C ->
+			 {C,hd(Values)}
+	end.
+
+% count the occurence of values
+%
+% return a tuple {number of occurances,list of numbers}
+%
+multimode(L) ->
+	case count(L,#{}) of
+	  [] -> {0,[]};
+	  [H|T] ->
+			{Key,Occurence} = H,
+			{Occurence,multimode(Occurence,T,[Key])}
+	 end.
+
+%
 % shannon entropy, https://en.wikipedia.org/wiki/Entropy_(information_theory)
+%
 -spec entropy(list(number())) -> float().
 entropy(L) ->
-	- lists:foldl( fun(P,Acc) -> Acc + ex(P) end, 0.0, L).
+	lists:foldl( fun(P,Acc) -> Acc + ex(P) end, 0.0, L).
 
 % -------- private ------------
+
+
+multimode(_,[],Acc) ->
+	Acc;
+
+multimode(Count,[H|Rest],Acc) ->
+	case Count > element(2,H) of
+		true -> % abort
+			Acc;
+		false ->
+			multimode(Count,Rest,[element(1,H)|Acc])
+	end.
 
 ex(V) when V == 0.0 -> 0.0;
 
@@ -148,6 +187,13 @@ psplit(L,Pivot) ->
 	{P,High} = lists:partition( fun(E) -> E > Pivot end, Temp),
 	{Low,P,High}.
 
+
+count([],Cmap) ->
+	lists:sort( fun(A,B) -> element(2,A) > element(2,B) end, maps:to_list(Cmap));
+
+count([H|T],Cmap) ->
+	count(T,maps:update_with(H, fun(Old) -> Old+1 end, 1, Cmap)).
+	
 % --------- test ------------
 approx(A,B,Eps) ->
 	abs(A - B) < Eps.
@@ -175,3 +221,12 @@ median_test() ->
 	?assertEqual(4,median([4, 1, 15, 2, 4, 5, 4])),
 	?assertEqual(30,median([11,23,30,47,56])),
 	?assertEqual(38.5,median([11,23,30,47,52,56])).
+
+mode_test() ->
+	% test multimode first, mode uses it
+	?assertEqual( multimode([]),{0,[]} ),
+	?assertEqual( multimode([1,1,1,2,10,10,23,10]), {3,[1,10]} ),
+	?assertEqual( multimode([1,2,3,4,5]),{1,[1,2,3,4,5]}),
+
+	?assertEqual( mode([]),{0,0}),
+	?assertEqual( mode([1,1,1,2,10,10,23,10]), {3,1} ).

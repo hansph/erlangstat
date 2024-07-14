@@ -23,6 +23,7 @@ Basic statistics:
 * covar/2 - covariance
 * covar_sample/2 - covariance of a sample
 * correlation/2
+* mode and multimode
 
 ## hist.erl
 create a histogram
