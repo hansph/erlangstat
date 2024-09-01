@@ -1,6 +1,6 @@
 -module(hist).
 
--export( [ create/2, create/4, normalize/1, cumhist/1, cumhist/2, print/1, values/1 ] ).
+-export( [ create/2, create/4, normalize/1, cumhist/1, cumhist/2, print/1, values/1, ecdf/1 ] ).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -20,6 +20,9 @@
 
 
 %
+%
+% Create a histogram.
+%
 % @param Numbers : a list containing the data
 % @param Bins : number of bins, starting from min(Numbers) to max(Numbers),
 %				width of a bin is abs((Max-Min)/Bins)
@@ -30,10 +33,7 @@ create( Numbers, Bins ) ->
 	create(Numbers,Bins,lists:min(Numbers),lists:max(Numbers)).
 
 %
-% @param Numbers : a list containing the data
-% @param Bins : number of bins
-% @param Min : minimum, "left" side of the histogram, everything small than Min is counted in the first bin
-% @param Max : maximum, "right" side, everything larger is counted in the last bin
+% normalize a histogram
 %
 % @returns a density histogram where all frequencies are normalized
 %
@@ -45,6 +45,8 @@ normalize( H ) ->
 		)
 	}.
 
+%
+% Create a histogram.
 %
 % @param Numbers : a list containing the data
 % @param Bins : number of bins
@@ -116,6 +118,19 @@ cumhist(Data) ->
 		),
 	Distrib.
 
+%
+% empirical cumulative density function
+%
+% @param Values is a list of numbers.
+% @return {values,propabilities) == x,y for a plot
+-spec ecdf( list(number()) ) -> { list(float()),list(number()) }.
+ecdf( Values ) ->
+	X = lists:sort(Values),
+	%Y = arange(1,lists:size(X)),
+	N = length(X),
+	Y = [ P/N || P <- lists:seq(1,N)],
+	{X,Y}.
+	
 
 %
 % return the histogram values as a list, starting with the 'left most' value
@@ -187,8 +202,7 @@ assertApprox([H1|T1],[H2|T2],Eps) ->
 
 
 assertHist( Expected, Hist ) ->
-	?debugFmt("--- Input: ~p",[Expected]),
-%	print(Hist),
+	%?debugFmt("--- Input: ~p",[Expected]),
 	?assertEqual( Expected, Hist#histogram.frequency ),
 	?assertEqual( length(Expected), Hist#histogram.nbins ),
 	?assertEqual( length(Hist#histogram.frequency), Hist#histogram.nbins ).
@@ -224,6 +238,14 @@ hist_test() ->
 
 cumhist_test() ->
 	% https://www.quora.com/What-is-an-empirical-distribution-function
+	% https://www2.tulane.edu/~salem/Cumulative%20Histogram.html
 	assertApprox( cumhist([1,2,3,4,5,6],6), [1/6,2/6,3/6,4/6,5/6,1.0], 1.0e-5 ),
 	assertApprox( cumhist([0.025,0.0125,0.0625,0.1,0.1625,0.1875,0.125,0.125,0.075,0.1,0.025]),
-					[0.025,0.0375,0.1,0.2,0.3625,0.55,0.675,0.8,0.875,0.975,1.0], 1.0e-5 ).
+					[0.025,0.0375,0.1,0.2,0.3625,0.55,0.675,0.8,0.875,0.975,1.0], 1.0e-5 ),
+	assertApprox( cumhist([0,3,4,22,39,3,12,23,33,1,3]),
+					[0.0,0.021,0.049,0.2028,0.4755,0.4965,0.5804,0.7413,0.9720,0.979,1.0], 1.0e-4).
+
+ecdf_test() ->
+	{X,Y} = ecdf([6.23, 5.58, 7.06, 6.42, 5.20]),
+	?assertEqual( [5.2,5.58,6.23,6.42,7.06], X ),
+	?assertEqual( [0.2,0.4,0.6,0.8,1.0], Y ).

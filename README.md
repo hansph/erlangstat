@@ -26,7 +26,10 @@ Basic statistics:
 * mode and multimode
 
 ## hist.erl
-create a histogram
+* create/1 a histogram
+* normalize/1 a histogram
+* cumhist/1 cumhist/2 create a cumulative histogram
+* ecdf/1
 
 ## csv.erl
 Read/write a csv file into a list of lists (a "table")
