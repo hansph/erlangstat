@@ -7,7 +7,8 @@
 -export( [minmax/1, print/1, avg/1, variance/1, variance_welford/1,
 			median/1, stddev/1, stddev_sample/1, sample_error/1,
 			covar/2, covar_sample/2, correlation/2,
-			entropy/1, mode/1, multimode/1
+			entropy/1, mode/1, multimode/1,
+			simple_lreg/2
 		 ] ).
 
 -record( stats, {	num = 0 ::non_neg_integer(),
@@ -131,8 +132,33 @@ multimode(L) ->
 entropy(L) ->
 	lists:foldl( fun(P,Acc) -> Acc + ex(P) end, 0.0, L).
 
-% -------- private ------------
 
+%
+% simple linear regression
+%
+% @param Datax is the first data set as a list of numbers
+% @param Datay is the second data set as a list of numbers
+% 
+% returns a tuple {intercept,regression coefficient}
+%
+-spec simple_lreg( list( number() ), list( number() ) ) -> { number(), number() }.
+simple_lreg( [], _ ) ->
+	{0.0,0.0};
+
+simple_lreg( Datax, Datay ) ->
+	N = length(Datax),
+	N =/= length(Datay) andalso error("different length of input lists."),
+
+	{Sx,Sx2,Sy,Sxy} = calc_sums(Datax,Datay,{0.0, 0.0, 0.0, 0.0 }),
+
+	B = (N*Sxy-Sx*Sy) / (N*Sx2-Sx*Sx),
+	A = (Sy-B*Sx)/N,
+	{A,B}.
+	
+
+%
+% -------- private ------------
+%
 
 multimode(_,[],Acc) ->
 	Acc;
@@ -193,7 +219,20 @@ count([],Cmap) ->
 
 count([H|T],Cmap) ->
 	count(T,maps:update_with(H, fun(Old) -> Old+1 end, 1, Cmap)).
-	
+
+
+% helper for simple_lreg
+calc_sums([],_,Acc) ->
+	Acc;
+
+calc_sums([Sx|Dx],[Sy|Dy],Acc) ->
+	calc_sums( Dx, Dy, { Sx + element(1,Acc),
+						 Sx*Sx + element(2,Acc),
+						 Sy + element(3,Acc),
+						 Sx*Sy + element(4,Acc)
+					   }
+			).
+
 % --------- test ------------
 approx(A,B,Eps) ->
 	abs(A - B) < Eps.
@@ -230,3 +269,12 @@ mode_test() ->
 
 	?assertEqual( mode([]),{0,0}),
 	?assertEqual( mode([1,1,1,2,10,10,23,10]), {3,1} ).
+
+slr_test() ->
+	?assertException(error,_,simple_lreg([1],[1,2])),
+
+	Dx = [ 0, 2, 5, 7 ],
+	Dy = [ -1, 5, 12, 20 ],
+	{A,B} = simple_lreg(Dx,Dy),
+	approx(A,-1.13793,0.0001),
+	approx(B,2.89655,0.0001).

@@ -24,6 +24,7 @@ Basic statistics:
 * covar_sample/2 - covariance of a sample
 * correlation/2
 * mode and multimode
+* simple regression
 
 ## hist.erl
 * create/1 a histogram
@@ -48,5 +49,5 @@ exports type table().
 * get_row/1 - return the nth row
 * subtable/2 - extract rows into a new table
 
-## exampl1.erl
-An example on how to use the library
+## examples
+Examples on how to use the library
